@@ -164,7 +164,7 @@ def find_lanes(binary_warped):
     plt.ylim(720, 0)
     plt.show()
 
-    return ploty, left_fit, right_fit
+    return left_fit, right_fit
 
 # Detect lane pixels and fit to find the lane boundary using previous lane info.
 def update_lanes(binary_warped, left_fit, right_fit):
@@ -224,7 +224,7 @@ def update_lanes(binary_warped, left_fit, right_fit):
 
     curvature(left_fitx, right_fitx, ploty)
 
-    return ploty, left_fit, right_fit
+    return left_fit, right_fit
 
 # Define conversions in x and y from pixels space to meters
 def curvature(leftx, rightx, ploty):
@@ -261,6 +261,33 @@ def show_output(img, binary_warped, ploty, left_fitx, right_fitx):
     # Combine the result with the original image
     result = cv2.addWeighted(img, 1, newwarp, 0.3, 0)
     plt.imshow(result)
+
+def show_output(left_fit, right_fit):
+    #show_output(img, binary_warped, ploty, left_fit, right_fit)
+    ploty = np.linspace(0, binary_warped.shape[0] - 1, binary_warped.shape[0])
+    left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
+    right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
+
+
+    # Create an image to draw the lines on
+    warp_zero = np.zeros_like(binary_warped).astype(np.uint8)
+    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
+
+    # Warp the blank back to original image space using inverse perspective matrix (Minv)
+    newwarp = cv2.warpPerspective(color_warp, Minv, (img.shape[1], img.shape[0]))
+    # Combine the result with the original image
+    result = cv2.addWeighted(img, 1, newwarp, 0.3, 0)
+    plt.imshow(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
+    plt.show()
+
 
 # Define a class to receive the characteristics of each line detection
 class Line():
@@ -324,27 +351,9 @@ for img_filename in img_filenames:
     # plt.imshow(binary_warped, cmap='gray')
     # plt.show()
 
-    ploty, left_fit, right_fit = find_lanes(binary_warped)
-    ploty, left_fit, right_fit = update_lanes(binary_warped, left_fit, right_fit)
+    left_fit, right_fit = find_lanes(binary_warped)
+    left_fit, right_fit = update_lanes(binary_warped, left_fit, right_fit)
 
-    #show_output(img, binary_warped, ploty, left_fit, right_fit)
-
-    # Create an image to draw the lines on
-    warp_zero = np.zeros_like(binary_warped).astype(np.uint8)
-    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
-
-    # Recast the x and y points into usable format for cv2.fillPoly()
-    pts_left = np.array([np.transpose(np.vstack([left_fit, ploty]))])
-    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fit, ploty])))])
-    pts = np.hstack((pts_left, pts_right))
-
-    # Draw the lane onto the warped blank image
-    cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
-
-    # Warp the blank back to original image space using inverse perspective matrix (Minv)
-    newwarp = cv2.warpPerspective(color_warp, Minv, (img.shape[1], img.shape[0]))
-    # Combine the result with the original image
-    result = cv2.addWeighted(img, 1, newwarp, 0.3, 0)
-    plt.imshow(result)
+    show_output(left_fit, right_fit)
 
 

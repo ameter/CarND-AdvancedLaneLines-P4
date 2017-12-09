@@ -53,6 +53,7 @@ class Line:
 
         #radius of curvature of the line in some meters
         self.radius_of_curvature = None
+        self.previous_curvature = None
 
         #distance in meters of vehicle center from the line
         self.line_base_pos = None
@@ -267,33 +268,33 @@ def set_line_attributes(line, allx, ally, binary_warped):
 
     line.bestx = np.mean(line.recent_xfitted, 0, np.int)
     line.line_base_pos = (line.current_xfit[-1] - binary_warped.shape[1] / 2) * xm_per_pix
+
+    # Get curvature
+    y_eval = np.max(ploty)
+    # Fit new polynomials to x,y in world space
+    fit_cr = np.polyfit(ploty * ym_per_pix, line.current_xfit * xm_per_pix, 2)
+    # Calculate the new radii of curvature
+    line.previous_curvature = line.radius_of_curvature
+    line.radius_of_curvature = ((1 + (2 * fit_cr[0] * y_eval * ym_per_pix + fit_cr[1]) ** 2) ** 1.5) / np.absolute(2 * fit_cr[0])
+
     line.detected = True
 
-# Define conversions in x and y from pixels space to meters
-def get_curvature(line, binary_warped):
-    y_eval = np.max(ploty)
-
-    # Fit new polynomials to x,y in world space
-    fit_cr = np.polyfit(ploty * ym_per_pix, line.bestx * xm_per_pix, 2)
-
-    # Calculate the new radii of curvature
-    curvature = ((1 + (2 * fit_cr[0] * y_eval * ym_per_pix + fit_cr[1]) ** 2) ** 1.5) / np.absolute(2 * fit_cr[0])
-    if line.radius_of_curvature == None:
-        line.radius_of_curvature = curvature
-    if abs(line.radius_of_curvature - curvature) > line.radius_of_curvature * 2:
-        line.radius_of_curvature = curvature
-        # print("insanity!!!  way too much curvature change")
-        # print(line.diffs)
-        # line.recent_xfitted.pop()
-        # line.bestx = np.mean(line.recent_xfitted, 0, np.int)
-        # line.recent_fits.pop()
-        # line.current_fit = line.recent_fits[-1]
-    else:
-        line.radius_of_curvature = curvature
 
 def get_vehicle_position(lines):
     return lines[1].line_base_pos + lines[0].line_base_pos
 
+def check_sanity(lines):
+    # diff_prev_curv_left = lines[0].previous_curvature - lines[0].radius_of_curvature
+
+    try:
+        for line in lines:
+            curv_change = abs(line.previous_curvature - line.radius_of_curvature)
+            if curv_change > 1000:
+                print()
+                print(frame, "dropping", curv_change)
+                print(frame, line.radius_of_curvature / line.previous_curvature)
+    except:
+        pass
 
 def generate_output(lines, Minv, binary_warped, img):
     vehicle_position = ((img.shape[1] // 2) - ((lines[0].current_xfit[-1] + lines[1].current_xfit[-1]) // 2) ) * xm_per_pix
@@ -314,8 +315,10 @@ def generate_output(lines, Minv, binary_warped, img):
     # Draw the lane onto the warped blank image
     cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
 
-    pts = np.transpose(np.vstack([lines[0].current_xfit, ploty])).reshape((-1,1,2)).astype(np.int32)
+    pts = np.transpose(np.vstack([lines[0].bestx, ploty])).reshape((-1,1,2)).astype(np.int32)
     cv2.drawContours(color_warp, pts, -1, (255,0,0), thickness=30)
+    pts = np.transpose(np.vstack([lines[1].bestx, ploty])).reshape((-1, 1, 2)).astype(np.int32)
+    cv2.drawContours(color_warp, pts, -1, (0, 0, 255), thickness=30)
     #plt.plot(line.current_xfit, ploty, color='yellow')
 
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
@@ -369,7 +372,7 @@ def process_image(input_img):
         else:
             find_line(binary_warped, line)
 
-        get_curvature(line, binary_warped)
+    check_sanity(lines)
 
     return generate_output(lines, Minv, binary_warped, img)
 

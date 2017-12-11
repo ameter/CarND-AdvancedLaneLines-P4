@@ -18,7 +18,7 @@ from moviepy.editor import VideoFileClip
 
 ym_per_pix = 30 / 720  # meters per pixel in y dimension
 xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
-DEBUG = True
+DEBUG = False
 
 lines = []
 frame = 0
@@ -33,7 +33,9 @@ class Line:
         self.side = side
         # number of line samples to average over for smoothing
         self.smoothing_factor = smoothing_factor
-        # was the line detected in the last iteration?
+        # number of bad detections (dropped frames)
+        self.dropped_frames = 0
+        # was the line detected in the last n iterations?
         self.detected = False
 
         # x values of the last n fits of the line
@@ -122,7 +124,6 @@ def perspective_transform(img):
 
 # Detect lane pixels and fit to find the lane boundary without using previous lane info.
 def find_line(binary_warped, line):
-    global frame
     # Take a histogram of the bottom half of the image
     histogram = np.sum(binary_warped[binary_warped.shape[0] // 3:, :], axis=0)
     # Create an output image to draw on and visualize the result
@@ -197,7 +198,6 @@ def find_line(binary_warped, line):
         plt.ylim(720, 0)
         # plt.show()
         plt.savefig("./output_images/lines" + str(frame))
-        frame += 1
         plt.close()
 
 
@@ -206,7 +206,7 @@ def update_line(binary_warped, line):
     nonzero = binary_warped.nonzero()
     nonzeroy = np.array(nonzero[0])
     nonzerox = np.array(nonzero[1])
-    margin = 100
+    margin = 75
     lane_inds = ((nonzerox > (line.current_fit[0] * (nonzeroy ** 2) + line.current_fit[1] * nonzeroy + line.current_fit[2] - margin)) & (nonzerox < (line.current_fit[0] * (nonzeroy ** 2) + line.current_fit[1] * nonzeroy + line.current_fit[2] + margin)))
 
     # Again, extract line pixel positions
@@ -238,9 +238,7 @@ def update_line(binary_warped, line):
         plt.xlim(0, 1280)
         plt.ylim(720, 0)
         # plt.show()
-        global frame
         plt.savefig("./output_images/lines" + str(frame))
-        frame += 1
         plt.close()
 
 def set_line_attributes(line, allx, ally, binary_warped):
@@ -283,25 +281,93 @@ def set_line_attributes(line, allx, ally, binary_warped):
 def get_vehicle_position(lines):
     return lines[1].line_base_pos + lines[0].line_base_pos
 
-def check_sanity(lines):
+def check_sanity(lines, binary_warped):
     # diff_prev_curv_left = lines[0].previous_curvature - lines[0].radius_of_curvature
+    #print()
+    # get difference between bottoms of lines
+    dx_bottom = lines[0].current_xfit[-1] - lines[1].current_xfit[-1]
+    # get a copy of left line superimposed over right line
+    overlay = lines[0].current_xfit - dx_bottom
+    # Get mean squared error of overlay and right line
+    mse = ((overlay - lines[1].current_xfit) ** 2).mean()
 
-    try:
+    if mse > 10000:
+        # The lines are not parallel enough.  Drop the detection
+        # Note: We only reset the values in the frame that matter for output and the next detection.
+        # If we use other values in the future, we will need to reset those here as well.
+        print()
+        print("Dropping", frame)
+        print()
         for line in lines:
-            curv_change = abs(line.previous_curvature - line.radius_of_curvature)
-            if curv_change > 1000:
-                print()
-                print(frame, "dropping", curv_change)
-                print(frame, line.radius_of_curvature / line.previous_curvature)
-    except:
-        pass
+            line.current_fit = line.recent_fits.pop()
+            line.best_fit =  np.mean(line.recent_fits, 0)
+            line.current_xfit = line.recent_xfitted.pop()
+            line.bestx = np.mean(line.recent_xfitted, 0, np.int)
+            line.radius_of_curvature = line.previous_curvature
+            line.dropped_frames += 1
+            if line.dropped_frames > 10:
+                line.detected = False
+    else:
+        for line in lines:
+            line.dropped_frames = 0
+
+
+    #print(frame, mse)
+    #for line in lines:
+        #print(frame, line.bestx[0], line.bestx[-1])
+    # try:
+    #     for line in lines:
+    #         #curv_change = abs(line.previous_curvature - line.radius_of_curvature)
+    #         # if curv_change > 1000:
+    #         #     print()
+    #         #     print(frame, "dropping", curv_change)
+    #
+    #         if np.sum(np.abs(line.diffs)) > 50:
+    #             print()
+    #             print(frame, "dropping", np.sum(np.abs(line.diffs)))
+    #             # print(frame, abs(line.previous_curvature - line.radius_of_curvature))
+    #             # print(frame, (line.previous_curvature - line.radius_of_curvature) / 2)
+    #             #print(frame, line.current_fit.deriv())
+    #             print(frame, "poly", np.polyder(line.current_fit))
+    #             print(frame, "poly", np.polyder(line.current_fit,3))
+    # except:
+    #     pass
+    # Create an image to draw on and an image to show the selection window
+    if DEBUG:
+        out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
+        window_img = np.zeros_like(out_img)
+
+        # Color in left and right line pixels
+        out_img[lines[0].ally, lines[0].allx] = [255, 0, 0]
+        out_img[lines[1].ally, lines[1].allx] = [0, 0, 255]
+
+        # Generate a polygon to illustrate the search window area
+        # And recast the x and y points into usable format for cv2.fillPoly()
+        #line_window1 = np.array([np.transpose(np.vstack([line.current_xfit - margin, ploty]))])
+        #line_window2 = np.array([np.flipud(np.transpose(np.vstack([line.current_xfit + margin, ploty])))])
+        #line_pts = np.hstack((line_window1, line_window2))
+
+        # Draw the lane onto the warped blank image
+        #cv2.fillPoly(window_img, np.int_([line_pts]), (0, 255, 0))
+        #result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
+        plt.imshow(out_img)
+        plt.plot(lines[0].current_xfit, ploty, color='yellow')
+        plt.plot(lines[1].current_xfit, ploty, color='yellow')
+        plt.plot(overlay, ploty, color='green')
+        plt.xlim(0, 1280)
+        plt.ylim(720, 0)
+        plt.title("MSE: " + str(int(mse)))
+        # plt.show()
+        plt.savefig("./output_images/mse" + str(frame))
+        plt.close()
+
+
 
 def generate_output(lines, Minv, binary_warped, img):
     vehicle_position = ((img.shape[1] // 2) - ((lines[0].current_xfit[-1] + lines[1].current_xfit[-1]) // 2) ) * xm_per_pix
     side = "left"
     if vehicle_position > 0:
         side = "right"
-
 
     # Create an image to draw the lines on
     warp_zero = np.zeros_like(binary_warped).astype(np.uint8)
@@ -316,9 +382,9 @@ def generate_output(lines, Minv, binary_warped, img):
     cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
 
     pts = np.transpose(np.vstack([lines[0].bestx, ploty])).reshape((-1,1,2)).astype(np.int32)
-    cv2.drawContours(color_warp, pts, -1, (255,0,0), thickness=30)
+    cv2.drawContours(color_warp, pts, -1, (255,0,0), thickness=50)
     pts = np.transpose(np.vstack([lines[1].bestx, ploty])).reshape((-1, 1, 2)).astype(np.int32)
-    cv2.drawContours(color_warp, pts, -1, (0, 0, 255), thickness=30)
+    cv2.drawContours(color_warp, pts, -1, (0, 0, 255), thickness=50)
     #plt.plot(line.current_xfit, ploty, color='yellow')
 
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
@@ -336,9 +402,20 @@ def generate_output(lines, Minv, binary_warped, img):
     # plt.show()
     return result
 
+# Accepts RGB image and returns image with lane identified
 def process_image(input_img):
-    global ploty
-    # Read and apply a distortion correction to raw images.
+    # referece global primatives
+    global ploty, frame
+
+    # track which frame we're on.
+    frame += 1
+
+    # Convert input image to BGR since we will be processing it with OpenCV
+    input_img = cv2.cvtColor(input_img, cv2.COLOR_RGB2BGR)
+    # cv2.imshow("image",input_img)
+    # cv2.waitKey(0)
+
+    # Apply a distortion correction to raw images.
     img = cv2.undistort(input_img, mtx, dist, None, mtx)
 
     # Threshold x gradient
@@ -372,9 +449,9 @@ def process_image(input_img):
         else:
             find_line(binary_warped, line)
 
-    check_sanity(lines)
+    check_sanity(lines, binary_warped)
 
-    return generate_output(lines, Minv, binary_warped, img)
+    return cv2.cvtColor(generate_output(lines, Minv, binary_warped, img), cv2.COLOR_BGR2RGB)
 
 def test_images():
     global lines
@@ -384,8 +461,9 @@ def test_images():
     img_filenames = glob("./test_images/test*.jpg")
 
     for img_filename in img_filenames:
-        result = process_image(cv2.imread(img_filename))
-        cv2.imwrite("./output_images/" + img_filename.split("/")[-1], result)
+        # Convert image to RGB before passing because that's what process_image expects
+        result = process_image(cv2.cvtColor(cv2.imread(img_filename), cv2.COLOR_BGR2RGB))
+        cv2.imwrite("./output_images/" + img_filename.split("/")[-1], cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
         # cv2.imshow("image", result)
         #cv2.waitKey(800)
 
@@ -396,8 +474,8 @@ def test_video():
     ## To do so add .subclip(start_second,end_second) to the end of the line below
     ## Where start_second and end_second are integer values representing the start and end of the subclip
     ## You may also uncomment the following line for a subclip of the first 5 seconds
-    clip = VideoFileClip("./project_video.mp4").subclip(39, 42)
-    # clip = VideoFileClip("./project_video.mp4")
+    #clip = VideoFileClip("./project_video.mp4").subclip(39, 42)
+    clip = VideoFileClip("./project_video.mp4")
 
     # Process the video
     result = clip.fl_image(process_image)  # NOTE: this function expects color images!!
@@ -412,7 +490,7 @@ calibration_data = pickle.load(open("./calibration.p", "rb"))
 mtx = calibration_data["mtx"]
 dist = calibration_data["dist"]
 
-#test_images()
+test_images()
 test_video()
 
 

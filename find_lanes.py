@@ -191,13 +191,12 @@ def find_line(binary_warped, line):
 
     if DEBUG:
         out_img[line.ally, line.allx] = [255, 0, 0]
-
         plt.imshow(out_img)
         plt.plot(line.current_xfit, ploty, color='yellow')
         plt.xlim(0, 1280)
         plt.ylim(720, 0)
         # plt.show()
-        plt.savefig("./output_images/lines" + str(frame))
+        plt.savefig("./output_images/lines" + str(frame) + "-" + line.side)
         plt.close()
 
 
@@ -238,7 +237,7 @@ def update_line(binary_warped, line):
         plt.xlim(0, 1280)
         plt.ylim(720, 0)
         # plt.show()
-        plt.savefig("./output_images/lines" + str(frame))
+        plt.savefig("./output_images/lines" + str(frame) + "-" + line.side)
         plt.close()
 
 def set_line_attributes(line, allx, ally, binary_warped):
@@ -412,17 +411,27 @@ def process_image(input_img):
 
     # Convert input image to BGR since we will be processing it with OpenCV
     input_img = cv2.cvtColor(input_img, cv2.COLOR_RGB2BGR)
-    # cv2.imshow("image",input_img)
-    # cv2.waitKey(0)
+    # if DEBUG:
+    #     cv2.imwrite("./writeup_images/input.jpg", input_img)
 
     # Apply a distortion correction to raw images.
     img = cv2.undistort(input_img, mtx, dist, None, mtx)
+    # if DEBUG:
+    #     cv2.imwrite("./writeup_images/undistorted.jpg", img)
 
     # Threshold x gradient
     sobel_x_binary = abs_sobel_thresh(img, 20, 100)
+    # if DEBUG:
+    #     plt.imshow(sobel_x_binary, cmap="gray")
+    #     plt.savefig("./writeup_images/sobel_x.jpg")
+    #     plt.close()
 
     # Threshold s channel
     hls_s_binary = hls_s_thresh(img, 170, 255)
+    # if DEBUG:
+    #     plt.imshow(hls_s_binary, cmap="gray")
+    #     plt.savefig("./writeup_images/hls_s_binary.jpg")
+    #     plt.close()
 
     # Stack each channel to view their individual contributions in green and blue respectively
     # This returns a stack of the two binary images, whose components you can see as different colors
@@ -431,15 +440,16 @@ def process_image(input_img):
     # Combine the two binary thresholds
     combined_binary = np.zeros_like(sobel_x_binary)
     combined_binary[(sobel_x_binary == 1) | (hls_s_binary == 1)] = 1
-
-    #plt.imshow(combined_binary, cmap='gray')
-    #plt.show()
+    # if DEBUG:
+    #     plt.imshow(combined_binary, cmap="gray")
+    #     plt.savefig("./writeup_images/combined_binary.jpg")
+    #     plt.close()
 
     binary_warped, Minv = perspective_transform(combined_binary)
-
-    #show2(img, warped)
-    # plt.imshow(binary_warped, cmap='gray')
-    # plt.show()
+    # if DEBUG:
+    #     plt.imshow(binary_warped, cmap="gray")
+    #     plt.savefig("./writeup_images/binary_warped.jpg")
+    #     plt.close()
 
     ploty = np.linspace(0, binary_warped.shape[0] - 1, binary_warped.shape[0])
 
@@ -463,6 +473,9 @@ def test_images():
     for img_filename in img_filenames:
         # Convert image to RGB before passing because that's what process_image expects
         result = process_image(cv2.cvtColor(cv2.imread(img_filename), cv2.COLOR_BGR2RGB))
+        # if DEBUG:
+        #     cv2.imwrite("./writeup_images/result.jpg", cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+
         cv2.imwrite("./output_images/" + img_filename.split("/")[-1], cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
         # cv2.imshow("image", result)
         #cv2.waitKey(800)

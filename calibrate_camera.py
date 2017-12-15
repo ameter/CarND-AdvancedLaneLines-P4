@@ -1,12 +1,5 @@
 '''
 Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
-Apply a distortion correction to raw images.
-Use color transforms, gradients, etc., to create a thresholded binary image.
-Apply a perspective transform to rectify binary image ("birds-eye view").
-Detect lane pixels and fit to find the lane boundary.
-Determine the curvature of the lane and vehicle position with respect to center.
-Warp the detected lane boundaries back onto the original image.
-Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 '''
 
 import numpy as np
@@ -51,6 +44,12 @@ img_size = (img.shape[1], img.shape[0])
 
 # Compute the camera calibration matrix and distortion coefficients
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size, None, None)
+
+# Output corrected image example
+# img = cv2.imread("./camera_cal/calibration1.jpg")
+# cv2.imwrite("./output_images/chessboard_input.jpg", img)
+# img = cv2.undistort(img, mtx, dist, None, mtx)
+# cv2.imwrite("./output_images/chessboard_undistorted.jpg", img)
 
 print ("\nCalibration Matrix:")
 print (mtx)

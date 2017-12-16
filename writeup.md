@@ -114,13 +114,13 @@ If lane lines were detected within the previous 10 frames, I use the `update_lin
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+I calculated the radius of curvature for each line based on the fit line described above (lines 270-275), and I calculated the vehicle position with respect to center by comparing the center of the frame (representing the camera position on the center of the vehicle) to the bottoms of the lane lines (lines 366-369) in `./find_lanes.py`.
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in the function `generate_output(lines, Minv, binary_warped, img)` (lines 365-402) in `./find_lanes.py`.  Here is an example of my result on a test image:
 
-![alt text][image6]
+![alt text][image13]
 
 ---
 
@@ -128,7 +128,7 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](./output_images/output_video.mp4)
 
 ---
 

@@ -29,7 +29,8 @@ The goals / steps of this project are the following:
 [image10]: ./writeup_images/sliding_window.png "sliding_window"
 [image11]: ./writeup_images/margin.png "margin"
 [image12]: ./writeup_images/mse1.png "mse1"
-[image13]: ./writeup_images/result.jpg "result"
+[image13]: ./writeup_images/mse2.png "mse2"
+[image14]: ./writeup_images/result.jpg "result"
 [video1]: ./output_images/output_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -120,7 +121,7 @@ I calculated the radius of curvature for each line based on the fit line describ
 
 I implemented this step in the function `generate_output(lines, Minv, binary_warped, img)` (lines 365-402) in `./find_lanes.py`.  Here is an example of my result on a test image:
 
-![alt text][image13]
+![alt text][image14]
 
 ---
 
@@ -136,4 +137,12 @@ Here's a [link to my video result](./output_images/output_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+My pipeline struggled with certain real-world issues such as shadows and changes in pavement, etc that led to erroneous line detections.  To cope with this, I implemeted a `check_sanity(lines, binary_warped)` function (lines 283-311) in `./find_lanes.py` that compared the difference in the left and right lane lines to ensure they were not too different.  I experimented with a number of techniques to identify bad line detections, including assessing the change in a line's curvature from one frame to the next and comparing the curvature between the left and right lanes.  Ultimately, I settled on comparing the left and right lines by overlaying the left line on the right and then computing the mean squared error (MSE) between the overlay and the right line.  Examples of using the technique is shown below, where the green line is the overlay and the MSE between the overlay and the right line is shown:
+
+##### MSE for Good Line Detection:
+![alt text][image12]
+
+##### MSE for Bad Line Detection:
+![alt text][image13]
+
+When bad detections are identified, the frames are dropped.  If 10 frames are dropped in a row, the lane detection reverts from the margin technique to the sliding window technique, as described above.  Overall, this led to good results on the project video.  However, more testing would be needed on different types of images (lighting, pavement and line color differences, weather conditions, etc) to create a more robust solution.

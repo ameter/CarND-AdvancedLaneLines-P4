@@ -310,27 +310,6 @@ def check_sanity(lines, binary_warped):
         for line in lines:
             line.dropped_frames = 0
 
-
-    #print(frame, mse)
-    #for line in lines:
-        #print(frame, line.bestx[0], line.bestx[-1])
-    # try:
-    #     for line in lines:
-    #         #curv_change = abs(line.previous_curvature - line.radius_of_curvature)
-    #         # if curv_change > 1000:
-    #         #     print()
-    #         #     print(frame, "dropping", curv_change)
-    #
-    #         if np.sum(np.abs(line.diffs)) > 50:
-    #             print()
-    #             print(frame, "dropping", np.sum(np.abs(line.diffs)))
-    #             # print(frame, abs(line.previous_curvature - line.radius_of_curvature))
-    #             # print(frame, (line.previous_curvature - line.radius_of_curvature) / 2)
-    #             #print(frame, line.current_fit.deriv())
-    #             print(frame, "poly", np.polyder(line.current_fit))
-    #             print(frame, "poly", np.polyder(line.current_fit,3))
-    # except:
-    #     pass
     # Create an image to draw on and an image to show the selection window
     if DEBUG:
         out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
@@ -340,15 +319,6 @@ def check_sanity(lines, binary_warped):
         out_img[lines[0].ally, lines[0].allx] = [255, 0, 0]
         out_img[lines[1].ally, lines[1].allx] = [0, 0, 255]
 
-        # Generate a polygon to illustrate the search window area
-        # And recast the x and y points into usable format for cv2.fillPoly()
-        #line_window1 = np.array([np.transpose(np.vstack([line.current_xfit - margin, ploty]))])
-        #line_window2 = np.array([np.flipud(np.transpose(np.vstack([line.current_xfit + margin, ploty])))])
-        #line_pts = np.hstack((line_window1, line_window2))
-
-        # Draw the lane onto the warped blank image
-        #cv2.fillPoly(window_img, np.int_([line_pts]), (0, 255, 0))
-        #result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
         plt.imshow(out_img)
         plt.plot(lines[0].current_xfit, ploty, color='yellow')
         plt.plot(lines[1].current_xfit, ploty, color='yellow')
@@ -357,7 +327,7 @@ def check_sanity(lines, binary_warped):
         plt.ylim(720, 0)
         plt.title("MSE: " + str(int(mse)))
         # plt.show()
-        plt.savefig("./output_images/mse" + str(frame))
+        plt.savefig("./output_images/" + str(frame))
         plt.close()
 
 

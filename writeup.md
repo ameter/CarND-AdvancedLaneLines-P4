@@ -17,13 +17,20 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/undistort_output.png "Undistorted"
-[image2]: ./test_images/test1.jpg "Road Transformed"
-[image3]: ./examples/binary_combo_example.jpg "Binary Example"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+[image1]: ./writeup_images/chessboard_corners.jpg "chessboard_corners"
+[image2]: ./writeup_images/chessboard_input.jpg "chessboard_input"
+[image3]: ./writeup_images/chessboard_undistorted.jpg "chessboard_undistorted"
+[image4]: ./writeup_images/input.jpg "input"
+[image5]: ./writeup_images/undistorted.jpg "undistorted"
+[image6]: ./writeup_images/sobel_x.jpg "sobel_x"
+[image7]: ./writeup_images/hls_s_binary.jpg.jpg "hls_s_binary.jpg"
+[image8]: ./writeup_images/combined_binary.jpg "combined_binary"
+[image9]: ./writeup_images/binary_warped.jpg "binary_warped"
+[image10]: ./writeup_images/sliding_window.jpg "sliding_window"
+[image11]: ./writeup_images/margin.jpg "margin"
+[image12]: ./writeup_images/mse1.jpg "mse1"
+[image13]: ./writeup_images/result.jpg "result"
+[video1]: ./output_images/output_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
